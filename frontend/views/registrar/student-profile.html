@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Profiles</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f3f4f6; }
+        .dashboard { display: flex; min-height: 100vh; }
+        .sidebar { width: 260px; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.1); position: fixed; height: 100vh; overflow-y: auto; }
+        .sidebar-header { padding: 2rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-align: center; }
+        .sidebar-menu { padding: 1.5rem; }
+        .sidebar-item { display: block; padding: 1rem; margin-bottom: 0.5rem; border-radius: 0.5rem; color: #374151; text-decoration: none; }
+        .sidebar-item:hover { background: #e0e7ff; color: #667eea; }
+        .sidebar-item.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .main-content { margin-left: 260px; flex: 1; padding: 2rem; }
+        .page-header { margin-bottom: 2rem; }
+        
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+        .stat-card { background: white; padding: 1.5rem; border-radius: 0.75rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .stat-value { font-size: 2rem; font-weight: 700; color: #1f2937; margin-bottom: 0.25rem; }
+        .stat-label { font-size: 0.875rem; color: #6b7280; }
+        
+        .search-bar { background: white; padding: 1.5rem; border-radius: 0.75rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 1.5rem; display: flex; gap: 1rem; }
+        .search-input { flex: 1; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 1rem; }
+        .search-input:focus { outline: none; border-color: #667eea; }
+        
+        .filters { background: white; padding: 1.5rem; border-radius: 0.75rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 1.5rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+        .filter-group { display: flex; flex-direction: column; }
+        .filter-group label { font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem; }
+        .filter-group select { padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem; }
+        
+        .table-container { background: white; border-radius: 0.75rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden; }
+        .table { width: 100%; border-collapse: collapse; }
+        .table thead { background: #f9fafb; }
+        .table th { padding: 1rem; text-align: left; font-weight: 600; color: #374151; font-size: 0.875rem; border-bottom: 2px solid #e5e7eb; }
+        .table td { padding: 1rem; border-bottom: 1px solid #e5e7eb; font-size: 0.875rem; }
+        .table tbody tr:hover { background: #f9fafb; }
+        
+        .badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+        .badge-enrolled { background: #d1fae5; color: #065f46; }
+        .badge-completed { background: #dbeafe; color: #1e40af; }
+        .badge-transferred_out { background: #fef3c7; color: #92400e; }
+        .badge-dropped { background: #fee2e2; color: #991b1b; }
+        .badge-graduated { background: #e0e7ff; color: #5b21b6; }
+        .badge-jhs { background: #dbeafe; color: #1e40af; }
+        .badge-shs { background: #e0e7ff; color: #5b21b6; }
+        
+        .btn { padding: 0.5rem 1rem; border-radius: 0.375rem; border: none; cursor: pointer; font-size: 0.875rem; font-weight: 500; text-decoration: none; display: inline-block; }
+        .btn-sm { padding: 0.375rem 0.75rem; font-size: 0.75rem; }
+        .btn-primary { background: #667eea; color: white; }
+        .btn:hover { opacity: 0.9; }
+        
+        .loading { text-align: center; padding: 3rem; color: #6b7280; }
+        .empty-state { text-align: center; padding: 3rem; color: #6b7280; }
+        .hidden { display: none; }
+        
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; overflow-y: auto; display: none; }
+        .modal { background: white; max-width: 900px; margin: 2rem auto; border-radius: 1rem; box-shadow: 0 20px 25px rgba(0,0,0,0.15); }
+        .modal-header { padding: 2rem; border-bottom: 1px solid #e5e7eb; }
+        .modal-title { font-size: 1.5rem; color: #1f2937; }
+        .modal-body { padding: 2rem; max-height: 70vh; overflow-y: auto; }
+        .modal-footer { padding: 1.5rem; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 1rem; }
+        
+        .detail-section { margin-bottom: 2rem; }
+        .detail-section h3 { font-size: 1.25rem; color: #667eea; margin-bottom: 1rem; }
+        .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .detail-item { margin-bottom: 1rem; }
+        .detail-item strong { display: block; margin-bottom: 0.25rem; color: #374151; }
+        .detail-item span { color: #6b7280; }
+        .info-box { background: #f9fafb; padding: 1rem; border-radius: 0.5rem; }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>🎓 Enrollment System</h2>
+                <p>Registrar Portal</p>
+            </div>
+            <nav class="sidebar-menu">
+                <a href="/views/registrar/dashboard.html" class="sidebar-item">📊 Dashboard</a>
+                <a href="/views/registrar/admission-management.html" class="sidebar-item">📝 Admissions</a>
+                <a href="/views/registrar/student-profile.html" class="sidebar-item active">👥 Students</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <div class="page-header">
+                <h1 style="font-size: 2rem; color: #1f2937;">Student Profiles</h1>
+                <p style="color: #6b7280;">View and manage enrolled students</p>
+            </div>
+
+            <!-- Statistics -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalStudents">0</div>
+                    <div class="stat-label">Total Students</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="enrolledStudents">0</div>
+                    <div class="stat-label">Enrolled</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="jhsStudents">0</div>
+                    <div class="stat-label">JHS Students</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="shsStudents">0</div>
+                    <div class="stat-label">SHS Students</div>
+                </div>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="search-bar">
+                <input type="text" id="searchInput" class="search-input" placeholder="Search by name or student number..." onkeyup="handleSearch()">
+                <button onclick="loadStudents()" class="btn btn-primary">Search</button>
+            </div>
+
+            <!-- Filters -->
+            <div class="filters">
+                <div class="filter-group">
+                    <label>School Level</label>
+                    <select id="filterLevel" onchange="loadStudents()">
+                        <option value="">All Levels</option>
+                        <option value="JHS">Junior High School</option>
+                        <option value="SHS">Senior High School</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Grade Level</label>
+                    <select id="filterGrade" onchange="loadStudents()">
+                        <option value="">All Grades</option>
+                        <option value="7">Grade 7</option>
+                        <option value="8">Grade 8</option>
+                        <option value="9">Grade 9</option>
+                        <option value="10">Grade 10</option>
+                        <option value="11">Grade 11</option>
+                        <option value="12">Grade 12</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Status</label>
+                    <select id="filterStatus" onchange="loadStudents()">
+                        <option value="">All Status</option>
+                        <option value="enrolled">Enrolled</option>
+                        <option value="completed">Completed</option>
+                        <option value="transferred_out">Transferred Out</option>
+                        <option value="dropped">Dropped</option>
+                        <option value="graduated">Graduated</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Student Type</label>
+                    <select id="filterType" onchange="loadStudents()">
+                        <option value="">All Types</option>
+                        <option value="regular">Regular</option>
+                        <option value="irregular">Irregular</option>
+                        <option value="transferee">Transferee</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="table-container">
+                <div id="loading" class="loading">Loading students...</div>
+                <div id="emptyState" class="empty-state hidden">No students found</div>
+                <table class="table" id="studentsTable" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th>Student #</th>
+                            <th>Name</th>
+                            <th>Level</th>
+                            <th>Grade</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Enrolled</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <!-- Details Modal -->
+    <div id="detailsModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">Student Details</h2>
+            </div>
+            <div id="modalContent" class="modal-body">
+                <p style="text-align: center;">Loading...</p>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeModal()" class="btn btn-primary">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        if (!token) window.location.href = '/views/public/login.html';
+
+        let searchTimeout;
+
+        function handleSearch() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                loadStudents();
+            }, 500);
+        }
+
+        async function loadStatistics() {
+            try {
+                const response = await fetch('http://localhost:3000/api/students/statistics', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    const stats = data.statistics;
+                    document.getElementById('totalStudents').textContent = stats.total || 0;
+                    document.getElementById('enrolledStudents').textContent = stats.enrolled || 0;
+                    document.getElementById('jhsStudents').textContent = stats.jhs || 0;
+                    document.getElementById('shsStudents').textContent = stats.shs || 0;
+                }
+            } catch (error) {
+                console.error('Failed to load statistics:', error);
+            }
+        }
+
+        async function loadStudents() {
+            const search = document.getElementById('searchInput').value;
+            const level = document.getElementById('filterLevel').value;
+            const grade = document.getElementById('filterGrade').value;
+            const status = document.getElementById('filterStatus').value;
+            const type = document.getElementById('filterType').value;
+
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('emptyState').classList.add('hidden');
+            document.getElementById('studentsTable').style.display = 'none';
+
+            try {
+                const params = new URLSearchParams();
+                if (search) params.append('search', search);
+                if (level) params.append('schoolLevel', level);
+                if (grade) params.append('gradeLevel', grade);
+                if (status) params.append('enrollmentStatus', status);
+                if (type) params.append('studentType', type);
+
+                const response = await fetch('http://localhost:3000/api/students?' + params.toString(), {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                const data = await response.json();
+                document.getElementById('loading').style.display = 'none';
+
+                if (response.ok && data.success) {
+                    if (data.students.length === 0) {
+                        document.getElementById('emptyState').classList.remove('hidden');
+                    } else {
+                        displayStudents(data.students);
+                    }
+                } else {
+                    alert('Failed to load students');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('loading').style.display = 'none';
+                alert('Connection error');
+            }
+        }
+
+        function displayStudents(students) {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            students.forEach(student => {
+                const row = document.createElement('tr');
+                const date = new Date(student.enrolled_at).toLocaleDateString();
+                
+                row.innerHTML = `
+                    <td><strong>${student.student_number}</strong></td>
+                    <td>${student.first_name} ${student.last_name}</td>
+                    <td><span class="badge badge-${student.school_level.toLowerCase()}">${student.school_level}</span></td>
+                    <td>Grade ${student.current_grade_level}</td>
+                    <td>${student.student_type}</td>
+                    <td><span class="badge badge-${student.enrollment_status}">${student.enrollment_status}</span></td>
+                    <td>${date}</td>
+                    <td>
+                        <button onclick="viewStudent(${student.student_id})" class="btn btn-primary btn-sm">View</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            document.getElementById('studentsTable').style.display = 'table';
+        }
+
+        async function viewStudent(id) {
+            try {
+                document.getElementById('detailsModal').style.display = 'block';
+                document.getElementById('modalContent').innerHTML = '<p style="text-align: center; padding: 2rem;">Loading...</p>';
+
+                const response = await fetch(`http://localhost:3000/api/students/${id}`, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    displayStudentDetails(data.student);
+                } else {
+                    document.getElementById('modalContent').innerHTML = '<p style="color: red; text-align: center;">Failed to load student details</p>';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('modalContent').innerHTML = '<p style="color: red; text-align: center;">Connection error</p>';
+            }
+        }
+
+        function displayStudentDetails(student) {
+            const enrolled = new Date(student.enrolled_at).toLocaleString();
+            const dob = new Date(student.date_of_birth).toLocaleDateString();
+            
+            document.getElementById('modalContent').innerHTML = `
+                <div class="detail-section">
+                    <h3>Student Information</h3>
+                    <div class="info-box detail-grid">
+                        <div><strong>Student Number:</strong> ${student.student_number}</div>
+                        <div><strong>Status:</strong> <span class="badge badge-${student.enrollment_status}">${student.enrollment_status}</span></div>
+                        <div><strong>Enrolled:</strong> ${enrolled}</div>
+                        <div><strong>Type:</strong> ${student.student_type}</div>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h3>Personal Information</h3>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <strong>Full Name:</strong>
+                            <span>${student.first_name} ${student.middle_name || ''} ${student.last_name} ${student.suffix || ''}</span>
+                        </div>
+                        <div class="detail-item">
+                            <strong>Date of Birth:</strong>
+                            <span>${dob}</span>
+                        </div>
+                        <div class="detail-item">
+                            <strong>Gender:</strong>
+                            <span>${student.gender}</span>
+                        </div>
+                        <div class="detail-item">
+                            <strong>Email:</strong>
+                            <span>${student.email || 'N/A'}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h3>Contact Information</h3>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <strong>Phone:</strong>
+                            <span>${student.phone_number || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item" style="grid-column: 1 / -1;">
+                            <strong>Address:</strong>
+                            <span>${student.address_line1}${student.address_line2 ? ', ' + student.address_line2 : ''}, ${student.city}, ${student.province} ${student.zip_code || ''}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h3>Guardian Information</h3>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <strong>Name:</strong>
+                            <span>${student.guardian_name}</span>
+                        </div>
+                        <div class="detail-item">
+                            <strong>Relationship:</strong>
+                            <span>${student.guardian_relationship}</span>
+                        </div>
+                        <div class="detail-item">
+                            <strong>Phone:</strong>
+                            <span>${student.guardian_phone}</span>
+                        </div>
+                        <div class="detail-item">
+                            <strong>Email:</strong>
+                            <span>${student.guardian_email || 'N/A'}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h3>Academic Information</h3>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <strong>School Level:</strong>
+                            <span class="badge badge-${student.school_level.toLowerCase()}">${student.school_level}</span>
+                        </div>
+                        <div class="detail-item">
+                            <strong>Current Grade:</strong>
+                            <span>Grade ${student.current_grade_level}</span>
+                        </div>
+                        ${student.strand ? `<div class="detail-item">
+                            <strong>Strand:</strong>
+                            <span>${student.strand}</span>
+                        </div>` : ''}
+                        <div class="detail-item">
+                            <strong>School Year:</strong>
+                            <span>${student.school_year}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function closeModal() {
+            document.getElementById('detailsModal').style.display = 'none';
+        }
+
+        document.getElementById('detailsModal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+
+        // Load data on page load
+        loadStatistics();
+        loadStudents();
+    </script>
+</body>
+</html>

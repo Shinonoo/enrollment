@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admission Management</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f3f4f6; }
+        .dashboard { display: flex; min-height: 100vh; }
+        .sidebar { width: 260px; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.1); position: fixed; height: 100vh; overflow-y: auto; }
+        .sidebar-header { padding: 2rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-align: center; }
+        .sidebar-menu { padding: 1.5rem; }
+        .sidebar-item { display: block; padding: 1rem; margin-bottom: 0.5rem; border-radius: 0.5rem; color: #374151; text-decoration: none; }
+        .sidebar-item:hover { background: #e0e7ff; color: #667eea; }
+        .sidebar-item.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .main-content { margin-left: 260px; flex: 1; padding: 2rem; }
+        .page-header { margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; }
+        .filters { background: white; padding: 1.5rem; border-radius: 0.75rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 1.5rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group label { font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem; }
+        .form-group select { padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.875rem; }
+        .table-container { background: white; border-radius: 0.75rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden; }
+        .table { width: 100%; border-collapse: collapse; }
+        .table thead { background: #f9fafb; }
+        .table th { padding: 1rem; text-align: left; font-weight: 600; color: #374151; font-size: 0.875rem; border-bottom: 2px solid #e5e7eb; }
+        .table td { padding: 1rem; border-bottom: 1px solid #e5e7eb; font-size: 0.875rem; }
+        .table tbody tr:hover { background: #f9fafb; }
+        .badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+        .badge-pending { background: #fef3c7; color: #92400e; }
+        .badge-approved { background: #d1fae5; color: #065f46; }
+        .badge-rejected { background: #fee2e2; color: #991b1b; }
+        .badge-jhs { background: #dbeafe; color: #1e40af; }
+        .badge-shs { background: #e0e7ff; color: #5b21b6; }
+        .btn { padding: 0.5rem 1rem; border-radius: 0.375rem; border: none; cursor: pointer; font-size: 0.875rem; font-weight: 500; }
+        .btn-sm { padding: 0.375rem 0.75rem; font-size: 0.75rem; }
+        .btn-success { background: #10b981; color: white; }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-primary { background: #667eea; color: white; }
+        .btn:hover { opacity: 0.9; }
+        .action-buttons { display: flex; gap: 0.5rem; }
+        .loading { text-align: center; padding: 3rem; color: #6b7280; }
+        .empty-state { text-align: center; padding: 3rem; color: #6b7280; }
+        .hidden { display: none; }
+        
+        /* Modal styles */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; overflow-y: auto; display: none; }
+        .modal { background: white; max-width: 800px; margin: 2rem auto; border-radius: 1rem; box-shadow: 0 20px 25px rgba(0,0,0,0.15); }
+        .modal-header { padding: 2rem; border-bottom: 1px solid #e5e7eb; }
+        .modal-title { font-size: 1.5rem; color: #1f2937; }
+        .modal-body { padding: 2rem; max-height: 70vh; overflow-y: auto; }
+        .modal-footer { padding: 1.5rem; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 1rem; }
+        .detail-section { margin-bottom: 2rem; }
+        .detail-section h3 { font-size: 1.25rem; color: #667eea; margin-bottom: 1rem; }
+        .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .detail-item { margin-bottom: 1rem; }
+        .detail-item strong { display: block; margin-bottom: 0.25rem; color: #374151; }
+        .detail-item span { color: #6b7280; }
+        .info-box { background: #f9fafb; padding: 1rem; border-radius: 0.5rem; }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>🎓 Enrollment System</h2>
+                <p>Registrar Portal</p>
+            </div>
+            <nav class="sidebar-menu">
+                <a href="/views/registrar/dashboard.html" class="sidebar-item">📊 Dashboard</a>
+                <a href="/views/registrar/admission-management.html" class="sidebar-item active">📝 Admissions</a>
+                <a href="/views/registrar/student-profile.html" class="sidebar-item">👥 Students</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <div class="page-header">
+                <div>
+                    <h1 style="font-size: 2rem; color: #1f2937;">Admission Management</h1>
+                    <p style="color: #6b7280;">View and manage student applications</p>
+                </div>
+                <button onclick="window.open('/views/public/admission.html', '_blank')" class="btn btn-primary">
+                    + New Application
+                </button>
+            </div>
+
+            <div class="filters">
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="filterStatus" onchange="loadApplications()">
+                        <option value="">All Status</option>
+                        <option value="pending">Pending</option>
+                        <option value="approved">Approved</option>
+                        <option value="rejected">Rejected</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>School Level</label>
+                    <select id="filterLevel" onchange="loadApplications()">
+                        <option value="">All Levels</option>
+                        <option value="JHS">Junior High School</option>
+                        <option value="SHS">Senior High School</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Grade Level</label>
+                    <select id="filterGrade" onchange="loadApplications()">
+                        <option value="">All Grades</option>
+                        <option value="7">Grade 7</option>
+                        <option value="8">Grade 8</option>
+                        <option value="9">Grade 9</option>
+                        <option value="10">Grade 10</option>
+                        <option value="11">Grade 11</option>
+                        <option value="12">Grade 12</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Application Type</label>
+                    <select id="filterType" onchange="loadApplications()">
+                        <option value="">All Types</option>
+                        <option value="new">New</option>
+                        <option value="returning">Returning</option>
+                        <option value="transferee">Transferee</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <div id="loading" class="loading">Loading applications...</div>
+                <div id="emptyState" class="empty-state hidden">No applications found</div>
+                <table class="table" id="applicationsTable" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Level</th>
+                            <th>Grade</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Submitted</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <!-- Details Modal -->
+    <div id="detailsModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">Application Details</h2>
+            </div>
+            <div id="modalContent" class="modal-body">
+                <p style="text-align: center;">Loading...</p>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeModal()" class="btn btn-primary">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        if (!token) window.location.href = '/views/public/login.html';
+
+        async function loadApplications() {
+            const status = document.getElementById('filterStatus').value;
+            const level = document.getElementById('filterLevel').value;
+            const grade = document.getElementById('filterGrade').value;
+            const type = document.getElementById('filterType').value;
+
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('emptyState').classList.add('hidden');
+            document.getElementById('applicationsTable').style.display = 'none';
+
+            try {
+                const params = new URLSearchParams();
+                if (status) params.append('status', status);
+                if (level) params.append('schoolLevel', level);
+                if (grade) params.append('gradeLevel', grade);
+                if (type) params.append('applicationType', type);
+
+                const response = await fetch('http://localhost:3000/api/admission?' + params.toString(), {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                const data = await response.json();
+                document.getElementById('loading').style.display = 'none';
+
+                if (response.ok && data.success) {
+                    if (data.applications.length === 0) {
+                        document.getElementById('emptyState').classList.remove('hidden');
+                    } else {
+                        displayApplications(data.applications);
+                    }
+                } else {
+                    alert('Failed to load applications');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('loading').style.display = 'none';
+                alert('Connection error');
+            }
+        }
+
+        function displayApplications(applications) {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            applications.forEach(app => {
+                const row = document.createElement('tr');
+                const date = new Date(app.submitted_at).toLocaleDateString();
+                
+            row.innerHTML = `
+                <td>#${app.application_id}</td>
+                <td><strong>${app.first_name} ${app.last_name}</strong></td>
+                <td><span class="badge badge-${app.school_level.toLowerCase()}">${app.school_level}</span></td>
+                <td>Grade ${app.grade_level}</td>
+                <td>${app.application_type}</td>
+                <td><span class="badge badge-${app.status}">${app.status}</span></td>
+                <td>${date}</td>
+                <td>
+                    <div class="action-buttons">
+                        ${app.status === 'pending' ? `
+                            <button onclick="approveApplication(${app.application_id})" class="btn btn-success btn-sm">Approve</button>
+                            <button onclick="rejectApplication(${app.application_id})" class="btn btn-danger btn-sm">Reject</button>
+                        ` : ''}
+                        ${app.status === 'approved' && !app.sent_to_accountant_at ? `
+                            <button onclick="sendToAccountant(${app.application_id})" class="btn btn-primary btn-sm">Send to Accountant</button>
+                        ` : ''}
+                        ${app.sent_to_accountant_at ? '<span class="badge badge-primary">Sent to Accountant</span>' : ''}
+                        <button onclick="viewDetails(${app.application_id})" class="btn btn-primary btn-sm">View</button>
+                    </div>
+                </td>
+            `;
+                tbody.appendChild(row);
+            });
+
+            document.getElementById('applicationsTable').style.display = 'table';
+        }
+
+        async function approveApplication(id) {
+            if (!confirm('Approve this application?')) return;
+
+            try {
+                const response = await fetch(`http://localhost:3000/api/admission/${id}/status`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ status: 'approved' })
+                });
+
+                const data = await response.json();
+                if (response.ok && data.success) {
+                    alert('Application approved successfully!');
+                    loadApplications();
+                } else {
+                    alert(data.message || 'Failed to approve application');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Connection error');
+            }
+        }
+
+        async function rejectApplication(id) {
+            const reason = prompt('Enter rejection reason:');
+            if (!reason) return;
+
+            try {
+                const response = await fetch(`http://localhost:3000/api/admission/${id}/status`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        status: 'rejected',
+                        rejectionReason: reason
+                    })
+                });
+
+                const data = await response.json();
+                if (response.ok && data.success) {
+                    alert('Application rejected');
+                    loadApplications();
+                } else {
+                    alert(data.message || 'Failed to reject application');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Connection error');
+            }
+        }
+
+        async function viewDetails(id) {
+            try {
+                document.getElementById('detailsModal').style.display = 'block';
+                document.getElementById('modalContent').innerHTML = '<p style="text-align: center; padding: 2rem;">Loading...</p>';
+
+                const response = await fetch(`http://localhost:3000/api/admission/${id}`, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    displayApplicationDetails(data.application);
+                } else {
+                    document.getElementById('modalContent').innerHTML = '<p style="color: red; text-align: center;">Failed to load details</p>';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('modalContent').innerHTML = '<p style="color: red; text-align: center;">Connection error</p>';
+            }
+        }
+
+        function displayApplicationDetails(app) {
+            const date = new Date(app.submitted_at).toLocaleString();
+            const dob = new Date(app.date_of_birth).toLocaleDateString();
+            
+            document.getElementById('modalContent').innerHTML = `
+                <div class="detail-section">
+                    <h3>Application Information</h3>
+                    <div class="info-box detail-grid">
+                        <div><strong>ID:</strong> #${app.application_id}</div>
+                        <div><strong>Status:</strong> <span class="badge badge-${app.status}">${app.status}</span></div>
+                        <div><strong>Submitted:</strong> ${date}</div>
+                        <div><strong>Type:</strong> ${app.application_type}</div>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h3>Personal Information</h3>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <strong>First Name:</strong>
+                            <span>${app.first_name}</span>
+                        </div>
+                        <div class="detail-item">
+                            <strong>Middle Name:</strong>
+                            <span>${app.middle_name || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <strong>Last Name:</strong>
+                            <span>${app.last_name}</span>
+                        </div>
+                        <div class="detail-item">
+                            <strong>Suffix:</strong>
+                            <span>${app.suffix || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <strong>Date of Birth:</strong>
+                            <span>${dob}</span>
+                        </div>
+                        <div class="detail-item">
+                            <strong>Gender:</strong>
+                            <span>${app.gender}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h3>Contact Information</h3>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <strong>Email:</strong>
+                            <span>${app.email || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <strong>Phone:</strong>
+                            <span>${app.phone_number || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item" style="grid-column: 1 / -1;">
+                            <strong>Address:</strong>
+                            <span>${app.address_line1}${app.address_line2 ? ', ' + app.address_line2 : ''}, ${app.city}, ${app.province} ${app.zip_code || ''}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h3>Guardian Information</h3>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <strong>Name:</strong>
+                            <span>${app.guardian_name}</span>
+                        </div>
+                        <div class="detail-item">
+                            <strong>Relationship:</strong>
+                            <span>${app.guardian_relationship}</span>
+                        </div>
+                        <div class="detail-item">
+                            <strong>Phone:</strong>
+                            <span>${app.guardian_phone}</span>
+                        </div>
+                        <div class="detail-item">
+                            <strong>Email:</strong>
+                            <span>${app.guardian_email || 'N/A'}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h3>Academic Information</h3>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <strong>School Level:</strong>
+                            <span class="badge badge-${app.school_level.toLowerCase()}">${app.school_level}</span>
+                        </div>
+                        <div class="detail-item">
+                            <strong>Grade Level:</strong>
+                            <span>Grade ${app.grade_level}</span>
+                        </div>
+                        ${app.strand ? `<div class="detail-item">
+                            <strong>Strand:</strong>
+                            <span>${app.strand}</span>
+                        </div>` : ''}
+                        <div class="detail-item">
+                            <strong>Previous School:</strong>
+                            <span>${app.previous_school || 'N/A'}</span>
+                        </div>
+                    </div>
+                </div>
+
+                ${app.rejection_reason ? `
+                <div class="detail-section">
+                    <h3>Rejection Reason</h3>
+                    <div style="background: #fee2e2; padding: 1rem; border-radius: 0.5rem; color: #991b1b;">
+                        ${app.rejection_reason}
+                    </div>
+                </div>
+                ` : ''}
+            `;
+        }
+
+        function closeModal() {
+            document.getElementById('detailsModal').style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('detailsModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        // Load applications on page load
+        loadApplications();
+
+        async function sendToAccountant(id) {
+            if (!confirm('Send this application to accountant for payment processing?')) return;
+
+            try {
+                const response = await fetch('http://localhost:3000/api/admission/send-to-accountant', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ applicationIds: [id] })
+                });
+
+                const data = await response.json();
+                if (response.ok && data.success) {
+                    alert('Application sent to accountant successfully!');
+                    loadApplications();
+                } else {
+                    alert(data.message || 'Failed to send application');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Connection error');
+            }
+        }
+        
+    </script>
+
+</body>
+</html>
